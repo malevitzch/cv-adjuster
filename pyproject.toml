@@ -1,0 +1,8 @@
+[project]
+
+name = "cv_adjuster"
+version = "0.1.0"
+description = "A tool for adjusting resume contents to specific job offers."
+dependencies = [
+    "markitdown[all]",
+]
