@@ -3,6 +3,21 @@
 name = "cv_adjuster"
 version = "0.1.0"
 description = "A tool for adjusting resume contents to specific job offers."
+requires-python = ">=3.10"
 dependencies = [
     "markitdown[all]",
 ]
+
+[project.scripts]
+process-achievements = "scripts.process_achievements:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["achievements"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
