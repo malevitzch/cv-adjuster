@@ -1,12 +1,12 @@
-from os import sys
+import sys
+from pathlib import Path
 
-from markitdown import MarkItDown
+from achievements import summarize_achievements
 
 
 def main():
     args = sys.argv
-    md = MarkItDown()
     path = args[1]
+    outpath = args[2]
 
-    result = md.convert(path)
-    print(result.text_content)
+    summarize_achievements(Path(path), Path(outpath))
