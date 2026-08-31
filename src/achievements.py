@@ -22,7 +22,12 @@ def mdify_achievements(source_path: Path, target_path: Path):
             mdify_achievements(child, target_path / child.name)
 
 
-def clean_achievements():
+def summarize_achievements(achievements_path: Path, summary_path: Path):
+    clean_achievements(achievements_path)
+    # TODO: have an LLM ingest achievements and summarize them into a single file at summary_path
+
+
+def clean_achievements(achievements_path: Path):
     _ = load_dotenv()
 
     openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
