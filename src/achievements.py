@@ -25,9 +25,10 @@ def mdify_achievements(source_path: Path, target_path: Path):
 
 
 def summarize_achievements(achievements_path: Path, summary_path: Path):
-    sandbox = Sandbox()
-    clean_achievements(achievements_path)
-    # TODO: have an LLM ingest achievements and summarize them into a single file at summary_path
+    with Sandbox() as sandbox:
+        print(sandbox.run_command("tree"))
+        clean_achievements(achievements_path)
+        # TODO: have an LLM ingest achievements and summarize them into a single file at summary_path
 
 
 def clean_achievements(achievements_path: Path):
