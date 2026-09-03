@@ -6,6 +6,8 @@ description = "A tool for adjusting resume contents to specific job offers."
 requires-python = ">=3.10"
 dependencies = [
     "markitdown[all]",
+    "docker",
+    "python-dotenv"
 ]
 
 [project.scripts]

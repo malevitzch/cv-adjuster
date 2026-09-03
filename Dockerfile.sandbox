@@ -16,6 +16,9 @@ RUN addgroup -S agent && \
     chown -R agent:agent /workspace
 
 WORKDIR /workspace
+
+RUN mkdir -p /workspace/input /workspace/output
+
 USER agent
 
 CMD ["bash"]

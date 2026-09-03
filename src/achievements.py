@@ -4,6 +4,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from markitdown import MarkItDown
 
+from sandbox import Sandbox
+
 md = MarkItDown()
 
 
@@ -23,6 +25,7 @@ def mdify_achievements(source_path: Path, target_path: Path):
 
 
 def summarize_achievements(achievements_path: Path, summary_path: Path):
+    sandbox = Sandbox()
     clean_achievements(achievements_path)
     # TODO: have an LLM ingest achievements and summarize them into a single file at summary_path
 
