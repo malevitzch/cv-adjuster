@@ -25,8 +25,13 @@ def mdify_achievements(source_path: Path, target_path: Path):
 
 
 def summarize_achievements(achievements_path: Path, summary_path: Path):
+    # TODO: The cleaned achievements should probably not be cleaned twice
+    # Git or something similar could be used to track changes and rerun minimally
+    # rather than doing the nuclear option
     with Sandbox() as sandbox:
+        sandbox.copy_to("example_achievements", "input/")
         print(sandbox.run_command("tree"))
+        sandbox.copy_from("input/", ".")
         clean_achievements(achievements_path)
         # TODO: have an LLM ingest achievements and summarize them into a single file at summary_path
 

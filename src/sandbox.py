@@ -1,10 +1,15 @@
-from pathlib import Path
+import tarfile
+from io import BytesIO
+from os import PathLike
+from pathlib import Path, PurePosixPath
 
 import docker
+from docker.errors import NotFound
 from docker.models.containers import Container
 
 DOCKERFILE_DIR = Path(__file__).resolve().parents[1]
 DOCKERFILE_NAME = "Dockerfile.sandbox"
+CONTAINER_WORKDIR = PurePosixPath("/workspace")
 
 
 class Sandbox:
@@ -65,7 +70,7 @@ class Sandbox:
     def _remove_existing_container(self) -> None:
         try:
             container = self._client.containers.get(self.name)
-        except docker.errors.NotFound:
+        except NotFound:
             return
 
         if self._verbose:
@@ -75,6 +80,51 @@ class Sandbox:
     def run_command(self, command: str) -> str:
         if self._container is None:
             raise RuntimeError("Sandbox container is not running")
-        ec, result = self._container.exec_run(command)
-        output = result.decode("utf-8")
+        result = self._container.exec_run(command)
+        output = result.output.decode("utf-8")
         return output
+
+    def copy_to(
+        self, host_src: str | PathLike[str], container_dest: str | PathLike[str]
+    ) -> None:
+        if self._container is None:
+            raise RuntimeError("Sandbox container is not running")
+
+        source = Path(host_src)
+        destination = PurePosixPath(container_dest)
+        if not destination.is_absolute():
+            destination = CONTAINER_WORKDIR / destination
+
+        archive = BytesIO()
+        with tarfile.open(fileobj=archive, mode="w") as tar:
+            tar.add(source, arcname=source.name)
+
+        self._container.put_archive(str(destination), archive.getvalue())
+
+    def copy_from(
+        self, container_src: str | PathLike[str], host_dest: str | PathLike[str]
+    ) -> None:
+        if self._container is None:
+            raise RuntimeError("Sandbox container is not running")
+
+        source = PurePosixPath(container_src)
+        if not source.is_absolute():
+            source = CONTAINER_WORKDIR / source
+
+        destination = Path(host_dest)
+        destination.mkdir(parents=True, exist_ok=True)
+        archive_stream, _ = self._container.get_archive(str(source))
+        archive = BytesIO(b"".join(archive_stream))
+
+        with tarfile.open(fileobj=archive, mode="r:") as tar:
+            destination_root = destination.resolve()
+            members = tar.getmembers()
+            for member in members:
+                member_path = (destination / member.name).resolve()
+                if not member_path.is_relative_to(destination_root):
+                    raise ValueError(
+                        f"Archive member escapes destination: {member.name}"
+                    )
+                if not (member.isfile() or member.isdir()):
+                    raise ValueError(f"Unsupported archive member: {member.name}")
+            tar.extractall(destination, members=members)
