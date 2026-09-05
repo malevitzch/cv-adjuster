@@ -87,38 +87,98 @@ class Sandbox:
     def copy_to(
         self, host_src: str | PathLike[str], container_dest: str | PathLike[str]
     ) -> None:
+        """Copy a file or directory into a container directory.
+
+        A directory is copied as a directory, including its top-level name.
+        """
         if self._container is None:
             raise RuntimeError("Sandbox container is not running")
 
         source = Path(host_src)
-        destination = PurePosixPath(container_dest)
-        if not destination.is_absolute():
-            destination = CONTAINER_WORKDIR / destination
+        if not (source.is_file() or source.is_dir()):
+            raise FileNotFoundError(source)
 
         archive = BytesIO()
         with tarfile.open(fileobj=archive, mode="w") as tar:
             tar.add(source, arcname=source.name)
 
-        self._container.put_archive(str(destination), archive.getvalue())
+        self._container.put_archive(
+            str(self._container_path(container_dest)), archive.getvalue()
+        )
+
+    def copy_directory_contents_to(
+        self, host_src: str | PathLike[str], container_dest: str | PathLike[str]
+    ) -> None:
+        """Copy all direct contents of a host directory into a container directory."""
+        if self._container is None:
+            raise RuntimeError("Sandbox container is not running")
+
+        source = Path(host_src)
+        if not source.is_dir():
+            raise NotADirectoryError(source)
+
+        archive = BytesIO()
+        with tarfile.open(fileobj=archive, mode="w") as tar:
+            for child in source.iterdir():
+                tar.add(child, arcname=child.name)
+
+        self._container.put_archive(
+            str(self._container_path(container_dest)), archive.getvalue()
+        )
 
     def copy_from(
         self, container_src: str | PathLike[str], host_dest: str | PathLike[str]
     ) -> None:
+        """Copy a file or directory into a host directory.
+
+        A directory is copied as a directory, including its top-level name.
+        """
         if self._container is None:
             raise RuntimeError("Sandbox container is not running")
 
-        source = PurePosixPath(container_src)
-        if not source.is_absolute():
-            source = CONTAINER_WORKDIR / source
+        archive_stream, _ = self._container.get_archive(
+            str(self._container_path(container_src))
+        )
+        self._extract_archive(archive_stream, Path(host_dest))
 
-        destination = Path(host_dest)
+    def copy_directory_contents_from(
+        self, container_src: str | PathLike[str], host_dest: str | PathLike[str]
+    ) -> None:
+        """Copy all contents of a container directory into a host directory."""
+        if self._container is None:
+            raise RuntimeError("Sandbox container is not running")
+
+        source = self._container_path(container_src)
+        archive_stream, stat = self._container.get_archive(str(source))
+        source_name = PurePosixPath(stat["name"]).name if stat else source.name
+        self._extract_archive(archive_stream, Path(host_dest), strip_prefix=source_name)
+
+    @staticmethod
+    def _container_path(path: str | PathLike[str]) -> PurePosixPath:
+        container_path = PurePosixPath(path)
+        if container_path.is_absolute():
+            return container_path
+        return CONTAINER_WORKDIR / container_path
+
+    @staticmethod
+    def _extract_archive(
+        archive_stream, destination: Path, strip_prefix: str | None = None
+    ) -> None:
+        """Safely extract a Docker archive, optionally omitting its root directory."""
         destination.mkdir(parents=True, exist_ok=True)
-        archive_stream, _ = self._container.get_archive(str(source))
         archive = BytesIO(b"".join(archive_stream))
 
         with tarfile.open(fileobj=archive, mode="r:") as tar:
             destination_root = destination.resolve()
             members = tar.getmembers()
+            has_root_directory = strip_prefix is not None and any(
+                PurePosixPath(member.name) == PurePosixPath(strip_prefix)
+                and member.isdir()
+                for member in members
+            )
+            if has_root_directory:
+                members = Sandbox._strip_archive_prefix(members, strip_prefix)
+
             for member in members:
                 member_path = (destination / member.name).resolve()
                 if not member_path.is_relative_to(destination_root):
@@ -128,3 +188,19 @@ class Sandbox:
                 if not (member.isfile() or member.isdir()):
                     raise ValueError(f"Unsupported archive member: {member.name}")
             tar.extractall(destination, members=members)
+
+    @staticmethod
+    def _strip_archive_prefix(
+        members: list[tarfile.TarInfo], prefix: str
+    ) -> list[tarfile.TarInfo]:
+        stripped_members = []
+        prefix_path = PurePosixPath(prefix)
+        for member in members:
+            member_path = PurePosixPath(member.name)
+            if member_path == prefix_path:
+                continue
+            if member_path.parts[:1] != prefix_path.parts:
+                raise ValueError(f"Archive member is outside source: {member.name}")
+            member.name = str(PurePosixPath(*member_path.parts[1:]))
+            stripped_members.append(member)
+        return stripped_members
