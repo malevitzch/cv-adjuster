@@ -17,6 +17,8 @@ class Arguments(Namespace):
         self.summary_path = ""
 
 
+# TODO: this should be decoupled into mdification and sumarization commands
+# and maybe one deluxe script that does both
 def main() -> None:
     parser = ArgumentParser()
     _ = parser.add_argument("path", help="The path to the source directory")

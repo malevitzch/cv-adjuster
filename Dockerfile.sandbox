@@ -8,7 +8,8 @@ RUN apk add --no-cache \
     diffutils \
     coreutils \
     patch \
-    less
+    less \
+    git
 
 RUN addgroup -S agent && \
     adduser -S -D -h /home/agent -s /bin/bash -G agent agent && \

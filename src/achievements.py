@@ -29,10 +29,12 @@ def summarize_achievements(achievements_path: Path, summary_path: Path):
     # Git or something similar could be used to track changes and rerun minimally
     # rather than doing the nuclear option
     with Sandbox() as sandbox:
-        sandbox.copy_to("example_achievements", "input/")
+        sandbox.copy_directory_contents_to(achievements_path, "input/")
         print(sandbox.run_command("tree"))
-        sandbox.copy_from("input/", ".")
         clean_achievements(achievements_path)
+
+        summary_path.mkdir(parents=True, exist_ok=True)
+        sandbox.copy_directory_contents_from("input/", summary_path)
         # TODO: have an LLM ingest achievements and summarize them into a single file at summary_path
 
 
