@@ -7,11 +7,15 @@ requires-python = ">=3.10"
 dependencies = [
     "markitdown[all]",
     "docker",
-    "python-dotenv"
+    "python-dotenv",
+    "pydantic-ai",
+    "pydantic-ai-harness",
 ]
 
 [project.scripts]
 process-achievements = "scripts.process_achievements:main"
+ac-mdify = "scripts.process_achievements:achievements_to_md"
+ac-summarize = "scripts.process_achievements:md_to_summary"
 
 [build-system]
 requires = ["setuptools>=69"]

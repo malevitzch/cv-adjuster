@@ -17,8 +17,6 @@ class Arguments(Namespace):
         self.summary_path = ""
 
 
-# TODO: this should be decoupled into mdification and sumarization commands
-# and maybe one deluxe script that does both
 def main() -> None:
     parser = ArgumentParser()
     _ = parser.add_argument("path", help="The path to the source directory")
@@ -29,3 +27,21 @@ def main() -> None:
 
     mdify_achievements(Path(args.path), Path(args.outpath))
     summarize_achievements(Path(args.outpath), Path(args.summary_path))
+
+
+def achievements_to_md() -> None:
+    parser = ArgumentParser()
+    _ = parser.add_argument("path", help="The path to the source directory")
+    _ = parser.add_argument("outpath", help="The path to the output directory")
+
+    args = cast(Arguments, parser.parse_args())
+    mdify_achievements(Path(args.path), Path(args.outpath))
+
+
+def md_to_summary() -> None:
+    parser = ArgumentParser()
+    _ = parser.add_argument("path", help="The path to the source directory")
+    _ = parser.add_argument("outpath", help="The path to the output directory")
+
+    args = cast(Arguments, parser.parse_args())
+    summarize_achievements(Path(args.path), Path(args.outpath))
