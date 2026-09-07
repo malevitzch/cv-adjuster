@@ -78,11 +78,24 @@ class Sandbox:
         container.remove(force=True)
 
     def run_command(self, command: str) -> str:
+        """Run a shell command inside the sandbox and return its combined output."""
         if self._container is None:
             raise RuntimeError("Sandbox container is not running")
-        result = self._container.exec_run(command)
+        result = self._container.exec_run(["bash", "-lc", command])
         output = result.output.decode("utf-8")
         return output
+
+    def _make_owned_by_agent(self, container_path: PurePosixPath) -> None:
+        """Allow the unprivileged container user to edit uploaded files."""
+        if self._container is None:
+            raise RuntimeError("Sandbox container is not running")
+
+        result = self._container.exec_run(
+            ["chown", "-R", "agent:agent", str(container_path)], user="root"
+        )
+        if result.exit_code != 0:
+            output = result.output.decode("utf-8")
+            raise RuntimeError(f"Could not set sandbox file ownership: {output}")
 
     def copy_to(
         self, host_src: str | PathLike[str], container_dest: str | PathLike[str]
@@ -105,6 +118,7 @@ class Sandbox:
         self._container.put_archive(
             str(self._container_path(container_dest)), archive.getvalue()
         )
+        self._make_owned_by_agent(self._container_path(container_dest) / source.name)
 
     def copy_directory_contents_to(
         self, host_src: str | PathLike[str], container_dest: str | PathLike[str]
@@ -125,6 +139,7 @@ class Sandbox:
         self._container.put_archive(
             str(self._container_path(container_dest)), archive.getvalue()
         )
+        self._make_owned_by_agent(self._container_path(container_dest))
 
     def copy_from(
         self, container_src: str | PathLike[str], host_dest: str | PathLike[str]
