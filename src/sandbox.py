@@ -55,6 +55,8 @@ class Sandbox:
         )
         if self._verbose:
             print("Sandbox container has been set up")
+
+        self._make_owned_by_agent(CONTAINER_WORKDIR / "logs")
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):

@@ -18,7 +18,7 @@ RUN addgroup -S agent && \
 
 WORKDIR /workspace
 
-RUN mkdir -p /workspace/input /workspace/output
+RUN mkdir -p /workspace/input /workspace/output /workspace/logs
 
 USER agent
 

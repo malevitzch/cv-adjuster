@@ -39,6 +39,7 @@ def summarize_achievements(
 def clean_achievements(achievements_path: Path, verbose: bool = False) -> None:
     """Use an isolated coding agent to clean Markdown files in ``achievements_path``."""
     _ = load_dotenv()
+    # TODO: make this more general, so that it works with any OPENAI-compatible API
     if not os.getenv("OPENROUTER_API_KEY"):
         raise RuntimeError("OPENROUTER_API_KEY must be set to clean achievements.")
 
@@ -47,6 +48,7 @@ def clean_achievements(achievements_path: Path, verbose: bool = False) -> None:
 
     with Sandbox(verbose=verbose) as sandbox:
         sandbox.copy_directory_contents_to(achievements_path, "input/")
+        sandbox.copy_directory_contents_to(achievements_path, "output/")
 
         agent = Agent(
             "openrouter:openai/gpt-5.6-luna",
@@ -55,8 +57,10 @@ def clean_achievements(achievements_path: Path, verbose: bool = False) -> None:
                 "You clean Markdown files."
                 "Your only workspace access is through the run_command tool, which "
                 "runs commands in an isolated environment. Work exclusively on files below "
-                "/workspace/input; do not create or modify files elsewhere. Inspect all "
-                "Markdown files there, apply the following skill, then verify the results.\n\n"
+                "/workspace/output; do not create or modify files elsewhere, including /workspace/input. "
+                "Inspect all Markdown files there, apply the following skill, then verify the results. "
+                "Remember that the input directory contains a clean copy of the input, which you can use "
+                "to assess if any information has been lost, and report that in the logs.\n\n"
                 f"{data_correction_skill}"
             ),
         )
@@ -81,4 +85,5 @@ def clean_achievements(achievements_path: Path, verbose: bool = False) -> None:
         else:
             agent.run_sync(prompt)
 
-        sandbox.copy_directory_contents_from("input/", achievements_path)
+        sandbox.copy_directory_contents_from("output/", achievements_path)
+        sandbox.copy_directory_contents_from("logs/", "mdify-logs/")

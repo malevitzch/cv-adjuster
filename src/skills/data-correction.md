@@ -21,6 +21,7 @@ Correct the extracted Markdown files so that they are readable and contain only 
 1. Identify the documents' structure and content. Determin whether there is any data only relevant to the layout of the original document and if there are any obvious extraction artifacts.
 2. Replace broken tables and fragmented multi-column layouts with semantic Markdown. Only ever leave tables if they are semantically meaningful and contain information that cannot be conveyed in a simpler format. Otherwise, convert tables to lists or paragraphs.
 3. Never add any additional information not present in the original document. Do not make things up or infer anything.
+4. If any information or something meaningful is lost, create a file under /workspace/logs to document the loss and explain why the removal was necessary, keeping the lost content as part of the log file. Note that this applies to artifacts which should potentially contain information - do not be too eager to discard things as unworthy of being put in the logs.
 
 ## Final Check
 
