@@ -17,24 +17,20 @@ candidate evidence, not necessarily as a claim that the candidate authored or
 personally achieved every fact in it. Sometimes, the context for a certain file 
 might be found in another file, so be wary of that.
 
-Write only Markdown files beneath the supplied output directory. Do not alter,
+Write only Markdown files beneath the /workspace/output directory. Do not alter,
 move, or copy input documents into the output. 
 
 ## What to extract
 
 Extract items that may help substantiate a future application, including:
 
-- measurable results, delivered outcomes, awards, and publications;
+- measurable results, delivered outcomes, awards, and publications
 - projects, research, products, systems, processes, and improvements the candidate
-  is explicitly connected to;
+  is explicitly connected to
 - roles, responsibilities, leadership, collaboration, and domain experience when
-  they establish relevant capability;
+  they establish relevant capability
 - tools, methods, languages, certifications, education, and other qualifications
-  when explicitly stated.
-
-Prefer an accomplishment stated as **action + object + result/impact + context + technology**.
-Keep useful supporting experience even when no metric or outcome is supplied; do
-not discard it merely because it is weaker than an achievement.
+  when explicitly stated
 
 ## Evidence rules
 
@@ -43,16 +39,14 @@ not discard it merely because it is weaker than an achievement.
   only describe a particular contribution if the source attributes it to them.
 - Do not turn duties into results, technologies mentioned in a document into skills
   possessed by the candidate, or future plans into completed work.
-- Resolve obvious duplicate copies into one card and cite all supporting sources.
-  If sources disagree, retain the conflict in the relevant card rather than choosing
-  a value or silently merging claims.
+- If any information is contradictory, put a written report in /workspace/logs.
 - Omit information that is only contact data, formatting, boilerplate, references,
   or unrelated document prose. Never include sensitive personal details unless they
   are essential to the achievement itself.
 
 ## Output layout
 
-TODO: 
+The output should be a set of markdown files, each containing a single relevant fact that could be used in a resume. This includes things such as projects, publications, awards, work experience, certificates, education, and possibly relevant coursework. The files should be written in a way that they can later be easily searched with a vector database.
 
 ## Workflow
 
@@ -60,21 +54,17 @@ TODO:
    portfolio/project-like, publications, or duplicates. Read enough surrounding
    context to determine the candidate's relation to each claim.
 2. Extract candidate-linked evidence, normalize obvious formatting variation, and
-   group it into independently retrievable cards. Combine corroborating evidence
-   from several files while preserving provenance.
-3. Write the cards and index. Compress aggressively by removing background and
-   repetition, not by dropping attribution, scope, metrics, limitations, or source
-   links.
-4. Review the output against the source: every number and claim must be traceable;
-   cards must be distinct, self-contained, and useful without the original CV; and
-   no input files or raw copies should appear in the output.
+   group it into independently retrievable files. The output structure of the files should be a
+   flat list, not a hierarchy. Furthermore, it does not have to match the input structure whatsoever.
+3. Write the cards and index. Compress aggressively by removing information that is not relevant in a resume.
+   Note that it's important to preserve info which would be useful for the same experience if approached from a different angle. For example, if a project description mentions a specific technology, it may be useful to keep that mention even if the candidate's role in the project is not clear.
+4. Esure that the output is factually accurate by comparing the output against the input files.
 
 ## Final check
 
 Before finishing, ensure that:
 
-- all input Markdown files were considered;
-- no achievement overstates the candidate's role or converts an aspiration into a
-  result;
-- each card has source notes and retrieval terms, and each card appears in the
-  index;
+- All input Markdown files were considered
+- No achievement overstates the candidate's role or converts an aspiration into a
+  result
+- Each output file contains a reasonable piece of information that could be put in a resume 
