@@ -5,6 +5,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from markitdown import MarkItDown
 from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
 from sandbox import Sandbox
 
@@ -39,9 +41,29 @@ def summarize_achievements(
 def clean_achievements(achievements_path: Path, verbose: bool = False) -> None:
     """Use an isolated coding agent to clean Markdown files in ``achievements_path``."""
     _ = load_dotenv()
-    # TODO: make this more general, so that it works with any OPENAI-compatible API
-    if not os.getenv("OPENROUTER_API_KEY"):
-        raise RuntimeError("OPENROUTER_API_KEY must be set to clean achievements.")
+    api_key = os.getenv("LLM_API_KEY")
+    if api_key is None:
+        print("LLM_API_KEY environment variable is not set.")
+        return
+    base_url = os.getenv("LLM_BASE_URL")
+    if base_url is None:
+        print("LLM_BASE_URL environment variable is not set.")
+        return
+    model_name = os.getenv("LLM_MODEL")
+    if model_name is None:
+        print("LLM_MODEL environment variable is not set.")
+        return
+
+    missing = [
+        name
+        for name, value in (("LLM_API_KEY", api_key), ("LLM_MODEL", model_name))
+        if not value
+    ]
+    if missing:
+        raise RuntimeError(
+            f"The following environment variables must be set to clean achievements: "
+            f"{', '.join(missing)}."
+        )
 
     skill_path = Path(__file__).with_name("skills") / "data-correction.md"
     data_correction_skill = skill_path.read_text(encoding="utf-8")
@@ -50,8 +72,12 @@ def clean_achievements(achievements_path: Path, verbose: bool = False) -> None:
         sandbox.copy_directory_contents_to(achievements_path, "input/")
         sandbox.copy_directory_contents_to(achievements_path, "output/")
 
+        model = OpenAIChatModel(
+            model_name,
+            provider=OpenAIProvider(base_url=base_url, api_key=api_key),
+        )
         agent = Agent(
-            "openrouter:openai/gpt-5.6-luna",
+            model,
             name="achievement-cleaner",
             instructions=(
                 "You clean Markdown files."
