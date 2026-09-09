@@ -1,4 +1,6 @@
 import tarfile
+from dataclasses import dataclass
+from enum import StrEnum
 from io import BytesIO
 from os import PathLike
 from pathlib import Path, PurePosixPath
@@ -12,6 +14,27 @@ DOCKERFILE_NAME = "Dockerfile.sandbox"
 CONTAINER_WORKDIR = PurePosixPath("/workspace")
 
 
+class Permissions(StrEnum):
+    READ_ONLY = "r"
+    READ_WRITE = "rw"
+
+
+@dataclass
+class SandboxDirectory:
+    """A directory in the sandbox container."""
+
+    path: PathLike[str] | str
+    permissions: Permissions
+
+
+def read_only_directory(path: PathLike[str]) -> SandboxDirectory:
+    return SandboxDirectory(path=path, permissions=Permissions.READ_ONLY)
+
+
+def read_write_directory(path: PathLike[str]) -> SandboxDirectory:
+    return SandboxDirectory(path=path, permissions=Permissions.READ_WRITE)
+
+
 class Sandbox:
     name: str
     img_tag: str
@@ -19,6 +42,7 @@ class Sandbox:
     _client: docker.DockerClient
     _container: Container | None
     _verbose: bool = False
+    _directories: list[SandboxDirectory]
 
     # TODO: use __enter__ __exit__ RAII
     def __init__(
@@ -26,6 +50,7 @@ class Sandbox:
         tag: str = "agent-sandbox:latest",
         name: str = "agent_sandbox_container",
         verbose: bool = True,
+        directories: list[SandboxDirectory] | None = None,
     ):
         self.name = name
         self.img_tag = tag
@@ -33,6 +58,10 @@ class Sandbox:
         self._client = docker.from_env()
         self._container = None
         self._verbose = verbose
+        if directories is None:
+            self._directories = []
+        else:
+            self._directories = directories
 
         # TODO: do I want logs? What do I do with them
         image, logs = self._client.images.build(
@@ -56,7 +85,9 @@ class Sandbox:
         if self._verbose:
             print("Sandbox container has been set up")
 
-        self._make_owned_by_agent(CONTAINER_WORKDIR / "logs")
+        for sandbox_directory in self._directories:
+            self.create_directory(sandbox_directory)
+
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -79,6 +110,41 @@ class Sandbox:
             print(f"Removing existing sandbox container {self.name}...")
         container.remove(force=True)
 
+    def create_directory(self, sandbox_directory: SandboxDirectory) -> None:
+        """Create a container directory with access granted to the ``agent`` group."""
+        container_path = self._container_path(sandbox_directory.path)
+        if self._container is None:
+            raise RuntimeError("Sandbox container is not running")
+
+        result = self._container.exec_run(
+            ["mkdir", "-p", str(container_path)], user="root"
+        )
+        if result.exit_code != 0:
+            output = result.output.decode("utf-8")
+            raise RuntimeError(f"Could not create sandbox directory: {output}")
+
+        # Keep root as the owner, but make agent the owning group. The setgid bit
+        # makes files and subdirectories created below inherit the agent group.
+        result = self._container.exec_run(
+            ["chown", "root:agent", str(container_path)], user="root"
+        )
+        if result.exit_code != 0:
+            output = result.output.decode("utf-8")
+            raise RuntimeError(f"Could not set sandbox directory group: {output}")
+
+        match sandbox_directory.permissions:
+            case Permissions.READ_ONLY:
+                mode = "2550"
+            case Permissions.READ_WRITE:
+                mode = "2770"
+
+        result = self._container.exec_run(
+            ["chmod", mode, str(container_path)], user="root"
+        )
+        if result.exit_code != 0:
+            output = result.output.decode("utf-8")
+            raise RuntimeError(f"Could not set sandbox directory permissions: {output}")
+
     def run_command(self, command: str) -> str:
         """Run a shell command inside the sandbox and return its combined output."""
         if self._container is None:
@@ -98,6 +164,38 @@ class Sandbox:
         if result.exit_code != 0:
             output = result.output.decode("utf-8")
             raise RuntimeError(f"Could not set sandbox file ownership: {output}")
+
+    def _make_read_only_for_agent(self, container_path: PurePosixPath) -> None:
+        """Make uploaded files readable, but not writable, by the ``agent`` group."""
+        if self._container is None:
+            raise RuntimeError("Sandbox container is not running")
+
+        result = self._container.exec_run(
+            ["chown", "-R", "root:agent", str(container_path)], user="root"
+        )
+        if result.exit_code != 0:
+            output = result.output.decode("utf-8")
+            raise RuntimeError(f"Could not set sandbox file group: {output}")
+
+        result = self._container.exec_run(
+            ["chmod", "-R", "g+rX,g-w,o-rwx", str(container_path)], user="root"
+        )
+        if result.exit_code != 0:
+            output = result.output.decode("utf-8")
+            raise RuntimeError(f"Could not set sandbox file permissions: {output}")
+
+    def _prepare_uploaded_path(self, container_path: PurePosixPath) -> None:
+        """Apply the configured permissions after Docker has extracted an archive."""
+        for sandbox_directory in self._directories:
+            directory_path = self._container_path(sandbox_directory.path)
+            if container_path.is_relative_to(directory_path):
+                if sandbox_directory.permissions is Permissions.READ_ONLY:
+                    self._make_read_only_for_agent(container_path)
+                else:
+                    self._make_owned_by_agent(container_path)
+                return
+
+        self._make_owned_by_agent(container_path)
 
     def copy_to(
         self, host_src: str | PathLike[str], container_dest: str | PathLike[str]
@@ -120,7 +218,7 @@ class Sandbox:
         self._container.put_archive(
             str(self._container_path(container_dest)), archive.getvalue()
         )
-        self._make_owned_by_agent(self._container_path(container_dest) / source.name)
+        self._prepare_uploaded_path(self._container_path(container_dest) / source.name)
 
     def copy_directory_contents_to(
         self, host_src: str | PathLike[str], container_dest: str | PathLike[str]
@@ -141,7 +239,7 @@ class Sandbox:
         self._container.put_archive(
             str(self._container_path(container_dest)), archive.getvalue()
         )
-        self._make_owned_by_agent(self._container_path(container_dest))
+        self._prepare_uploaded_path(self._container_path(container_dest))
 
     def copy_from(
         self, container_src: str | PathLike[str], host_dest: str | PathLike[str]

@@ -8,7 +8,7 @@ from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
-from sandbox import Sandbox
+from sandbox import Sandbox, read_only_directory, read_write_directory
 
 md = MarkItDown()
 
@@ -68,7 +68,14 @@ def clean_achievements(achievements_path: Path, verbose: bool = False) -> None:
     skill_path = Path(__file__).with_name("skills") / "data-correction.md"
     data_correction_skill = skill_path.read_text(encoding="utf-8")
 
-    with Sandbox(verbose=verbose) as sandbox:
+    with Sandbox(
+        verbose=verbose,
+        directories=[
+            read_only_directory("input/"),
+            read_write_directory("output/"),
+            read_write_directory("logs/"),
+        ],
+    ) as sandbox:
         sandbox.copy_directory_contents_to(achievements_path, "input/")
         sandbox.copy_directory_contents_to(achievements_path, "output/")
 
