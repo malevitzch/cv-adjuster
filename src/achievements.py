@@ -35,6 +35,62 @@ def summarize_achievements(
     # TODO: have an LLM ingest cleaned achievements and summarize them into a single file at summary_path
 
 
+def summarize_cleaned_achievements(
+    achievements_path: Path, summary_path: Path, verbose: bool = False
+):
+    """Summarize cleaned achievements."""
+    skill_path = Path(__file__).with_name("skills") / "summarize-achievements.md"
+    summarize_skill = skill_path.read_text(encoding="utf-8")
+
+    with Sandbox(
+        verbose=verbose,
+        directories=[
+            read_only_directory("input/"),
+            read_write_directory("output/"),
+            read_write_directory("logs/"),
+        ],
+    ) as sandbox:
+        sandbox.copy_directory_contents_to(achievements_path, "input/")
+        model = get_model()
+        agent = Agent(
+            model,
+            name="achievement-summarizer",
+            instructions=(
+                "You summarize cleaned Markdown files."
+                "Your only workspace access is through the run_command tool, which "
+                "runs commands in an isolated environment. Work exclusively on files below "
+                "/workspace/output; do not create or modify files elsewhere, including /workspace/input. "
+                "Inspect all Markdown files there, apply the following skill, then verify the results. "
+                "If there are any uncertainties, report them in the logs.\n\n"
+                f"{summarize_skill}"
+            ),
+        )
+
+        @agent.tool_plain
+        def run_command(command: str) -> str:
+            """Run an arbitrary shell command in the isolated container workspace."""
+            return sandbox.run_command(command)
+
+        prompt = (
+            "Summarize the Markdown files under /workspace/input according to the "
+            "summarize-achievements skill, producing summary files in /workspace/output. "
+            "Make sure to inspect all input files, and finish only after all files are summarized."
+        )
+
+        if verbose:
+
+            async def print_agent_events(_, events) -> None:
+                async for event in events:
+                    print(event, flush=True)
+
+            agent.run_sync(prompt, event_stream_handler=print_agent_events)
+        else:
+            agent.run_sync(prompt)
+
+        sandbox.copy_directory_contents_from("input/", summary_path)
+        sandbox.copy_directory_contents_from("logs/", "summarize-logs/")
+
+
 def clean_achievements(achievements_path: Path, verbose: bool = False) -> None:
     """Use an isolated coding agent to clean Markdown files in ``achievements_path``."""
     skill_path = Path(__file__).with_name("skills") / "data-correction.md"
