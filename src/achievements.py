@@ -1,4 +1,3 @@
-import shutil
 from pathlib import Path
 
 from markitdown import MarkItDown
@@ -26,16 +25,6 @@ def mdify_achievements(source_path: Path, target_path: Path):
 
 
 def summarize_achievements(
-    achievements_path: Path, summary_path: Path, verbose: bool = False
-) -> None:
-    clean_achievements(achievements_path, verbose=verbose)
-
-    summary_path.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(achievements_path, summary_path, dirs_exist_ok=True)
-    # TODO: have an LLM ingest cleaned achievements and summarize them into a single file at summary_path
-
-
-def summarize_cleaned_achievements(
     achievements_path: Path, summary_path: Path, verbose: bool = False
 ):
     """Summarize cleaned achievements."""
@@ -87,7 +76,7 @@ def summarize_cleaned_achievements(
         else:
             agent.run_sync(prompt)
 
-        sandbox.copy_directory_contents_from("input/", summary_path)
+        sandbox.copy_directory_contents_from("output/", summary_path)
         sandbox.copy_directory_contents_from("logs/", "summarize-logs/")
 
 
