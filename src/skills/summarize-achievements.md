@@ -34,6 +34,10 @@ Extract items that may help substantiate a future application, including:
 
 ## Evidence rules
 
+- Only focus on the candidate mentioned in the CANDIDATE.md if there is one. 
+  Do not create achievement cards for other people mentioned in the documents.
+- Even though certain things are not directly achievements, you should still keep 
+  softer information that could be useful for a resume, such as relevant skills, tools, and methods.
 - Do not infer personal ownership from a team, employer, laboratory, paper, or
   product claim. For a co-authored paper, say that the candidate co-authored it;
   only describe a particular contribution if the source attributes it to them.

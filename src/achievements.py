@@ -1,3 +1,4 @@
+from datetime import date
 from pathlib import Path
 
 from markitdown import MarkItDown
@@ -61,6 +62,12 @@ def summarize_achievements(
             return sandbox.run_command(command)
 
         prompt = (
+            f"Reference date for interpreting relative dates: {date.today().isoformat()}. "
+            "Use this date only to interpret things that are relative to the current date. "
+            "Be wary of temporal words in old documents, do not automatically assume that "
+            "everything is related to today. But in the case of handwritten notes, it is reasonable "
+            "to assume that the note was written around the time of the processing, so you can use "
+            "the date of the note to interpret relative dates in the note. "
             "Summarize the Markdown files under /workspace/input according to the "
             "summarize-achievements skill, producing summary files in /workspace/output. "
             "Make sure to inspect all input files, and finish only after all files are summarized."
