@@ -9,7 +9,7 @@ import docker
 from docker.errors import NotFound
 from docker.models.containers import Container
 
-DEFAULT_DOCKERFILE_DIR = Path(__file__).resolve().parents[1]
+DEFAULT_DOCKERFILE_DIR = Path(__file__).resolve().parents[1] / "dockerfiles"
 DEFAULT_DOCKERFILE_NAME = "Dockerfile.sandbox"
 DEFAULT_DOCKERFILE_PATH = DEFAULT_DOCKERFILE_DIR / DEFAULT_DOCKERFILE_NAME
 CONTAINER_WORKDIR = PurePosixPath("/workspace")
