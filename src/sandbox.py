@@ -9,8 +9,9 @@ import docker
 from docker.errors import NotFound
 from docker.models.containers import Container
 
-DOCKERFILE_DIR = Path(__file__).resolve().parents[1]
-DOCKERFILE_NAME = "Dockerfile.sandbox"
+DEFAULT_DOCKERFILE_DIR = Path(__file__).resolve().parents[1]
+DEFAULT_DOCKERFILE_NAME = "Dockerfile.sandbox"
+DEFAULT_DOCKERFILE_PATH = DEFAULT_DOCKERFILE_DIR / DEFAULT_DOCKERFILE_NAME
 CONTAINER_WORKDIR = PurePosixPath("/workspace")
 
 
@@ -51,6 +52,7 @@ class Sandbox:
         name: str = "agent_sandbox_container",
         verbose: bool = True,
         directories: list[SandboxDirectory] | None = None,
+        dockerfile: Path = DEFAULT_DOCKERFILE_PATH,
     ):
         self.name = name
         self.img_tag = tag
@@ -65,8 +67,8 @@ class Sandbox:
 
         # TODO: do I want logs? What do I do with them
         image, logs = self._client.images.build(
-            path=str(DOCKERFILE_DIR),
-            dockerfile=DOCKERFILE_NAME,
+            path=str(dockerfile.parent),
+            dockerfile=dockerfile.name,
             tag=tag,
         )
         if verbose:
