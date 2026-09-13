@@ -6,7 +6,7 @@ from os import PathLike
 from pathlib import Path, PurePosixPath
 
 import docker
-from docker.errors import NotFound
+from docker.errors import BuildError, NotFound
 from docker.models.containers import Container
 
 DEFAULT_DOCKERFILE_DIR = Path(__file__).resolve().parents[1] / "dockerfiles"
@@ -45,7 +45,6 @@ class Sandbox:
     _verbose: bool = False
     _directories: list[SandboxDirectory]
 
-    # TODO: use __enter__ __exit__ RAII
     def __init__(
         self,
         tag: str = "agent-sandbox:latest",
@@ -56,7 +55,6 @@ class Sandbox:
     ):
         self.name = name
         self.img_tag = tag
-        # TODO: catch docker crashes
         self._client = docker.from_env()
         self._container = None
         self._verbose = verbose
@@ -65,14 +63,25 @@ class Sandbox:
         else:
             self._directories = directories
 
-        # TODO: do I want logs? What do I do with them
-        image, logs = self._client.images.build(
-            path=str(dockerfile.parent),
-            dockerfile=dockerfile.name,
-            tag=tag,
-        )
+        try:
+            image, _ = self._client.images.build(
+                path=str(dockerfile.parent),
+                dockerfile=dockerfile.name,
+                tag=tag,
+            )
+        except BuildError as error:
+            build_log = "".join(
+                entry.get("stream", entry.get("error", "")) for entry in error.build_log
+            )
+            raise RuntimeError(
+                f"Could not build Docker image {tag!r}:\n{build_log}"
+            ) from error
+
+        if image is None or not image.id:
+            raise RuntimeError(f"Docker build returned no image for tag {tag!r}")
+
         if verbose:
-            print("Built image:", image.tags[0])
+            print("Built image:", tag, image.id)
 
     def __enter__(self):
         if self._verbose:
