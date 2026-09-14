@@ -92,6 +92,7 @@ class Sandbox:
             command="sleep infinity",
             detach=True,
             name=self.name,
+            network_disabled=True,
         )
         if self._verbose:
             print("Sandbox container has been set up")
