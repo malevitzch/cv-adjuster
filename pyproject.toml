@@ -16,6 +16,7 @@ dependencies = [
 process-achievements = "scripts.process_achievements:main"
 ac-mdify = "scripts.process_achievements:achievements_to_md"
 ac-summarize = "scripts.process_achievements:md_to_summary"
+cv-adjust = "scripts.cv_adjustement:main"
 
 [build-system]
 requires = ["setuptools>=69"]
@@ -23,7 +24,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-py-modules = ["achievements"]
+py-modules = ["achievements", "cv_adjustement", "models", "sandbox"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
