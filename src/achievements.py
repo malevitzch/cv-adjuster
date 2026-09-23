@@ -16,9 +16,13 @@ def mdify_achievements(source_path: Path, target_path: Path):
         txt = result.markdown
         target_path.parent.mkdir(parents=True, exist_ok=True)
         name = target_path.stem + ".md"
-        with open(target_path.with_name(name), "w") as output_file:
-            # TODO: check if it didn't fail, maybe log somewhere
-            _ = output_file.write(txt)
+        try:
+            with open(target_path.with_name(name), "w") as output_file:
+                _ = output_file.write(txt)
+        except PermissionError:
+            print(f"Permission denied to write {target_path.with_name(name)}")
+        except OSError as e:
+            print(f"Failed to write file: {e}")
 
     elif source_path.is_dir():
         for child in source_path.iterdir():
